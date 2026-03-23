@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Business Intelligence Dashboard</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg-primary: #ffffff;
+      --bg-secondary: #f5f5f3;
+      --bg-tertiary: #eeede8;
+      --bg-danger: #fcebeb;
+      --text-primary: #1a1a18;
+      --text-secondary: #5f5e5a;
+      --text-tertiary: #888780;
+      --text-info: #185fa5;
+      --text-danger: #a32d2d;
+      --border-light: rgba(0,0,0,0.10);
+      --border-mid: rgba(0,0,0,0.18);
+      --radius-md: 8px;
+      --radius-lg: 12px;
+      --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      --font-mono: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg-primary: #1e1e1c;
+        --bg-secondary: #272724;
+        --bg-tertiary: #2e2e2b;
+        --bg-danger: #2d1a1a;
+        --text-primary: #f0ede6;
+        --text-secondary: #a8a5a0;
+        --text-tertiary: #6b6966;
+        --text-info: #85b7eb;
+        --text-danger: #f09595;
+        --border-light: rgba(255,255,255,0.08);
+        --border-mid: rgba(255,255,255,0.14);
+      }
+    }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg-tertiary);
+      color: var(--text-primary);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      background: var(--bg-primary);
+      border-bottom: 0.5px solid var(--border-light);
+      padding: 14px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .logo { font-size: 14px; font-weight: 500; color: var(--text-primary); }
+    .logo span { color: var(--text-tertiary); font-weight: 400; }
+
+    .badge {
+      font-size: 11px;
+      padding: 4px 10px;
+      border-radius: 20px;
+      background: var(--bg-secondary);
+      color: var(--text-secondary);
+      border: 0.5px solid var(--border-light);
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 290px minmax(0, 1fr);
+      flex: 1;
+      gap: 0;
+    }
+
+    .sidebar {
+      background: var(--bg-primary);
+      border-right: 0.5px solid var(--border-light);
+      display: flex;
+      flex-direction: column;
+      padding: 20px;
+      gap: 18px;
+      min-height: calc(100vh - 53px);
+    }
+
+    .main {
+      background: var(--bg-secondary);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .topbar {
+      background: var(--bg-primary);
+      border-bottom: 0.5px solid var(--border-light);
+      padding: 13px 22px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .topbar-title { font-size: 14px; font-weight: 500; }
+
+    .topbar-status {
+      font-size: 12px;
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--text-tertiary);
+      flex-shrink: 0;
+    }
+    .dot.ok { background: #639922; }
+
+    .content { padding: 22px; flex: 1; }
+
+    .sec-label {
+      font-size: 10px;
+      font-weight: 500;
+      color: var(--text-tertiary);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 7px;
+    }
+
+    .key-wrap { position: relative; margin-bottom: 6px; }
+    .key-wrap input {
+      width: 100%;
+      padding: 9px 46px 9px 10px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      border: 0.5px solid var(--border-mid);
+      border-radius: var(--radius-md);
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      outline: none;
+    }
+    .key-wrap input:focus { border-color: rgba(0,0,0,0.35); }
+    @media (prefers-color-scheme: dark) {
+      .key-wrap input:focus { border-color: rgba(255,255,255,0.3); }
+    }
+
+    .eye-btn {
+      position: absolute; right: 10px; top: 50%;
+      transform: translateY(-50%);
+      background: none; border: none;
+      font-size: 11px; color: var(--text-tertiary);
+      cursor: pointer; padding: 0;
+    }
+    .eye-btn:hover { color: var(--text-secondary); }
+
+    .key-hint { font-size: 11px; color: var(--text-tertiary); line-height: 1.55; }
+    .key-hint a { color: var(--text-info); text-decoration: none; }
+    .key-hint a:hover { text-decoration: underline; }
+
+    .divider { border: none; border-top: 0.5px solid var(--border-light); }
+
+    textarea {
+      width: 100%;
+      height: 175px;
+      resize: vertical;
+      border: 0.5px solid var(--border-mid);
+      border-radius: var(--radius-md);
+      padding: 10px;
+      font-size: 12px;
+      font-family: var(--font-mono);
+      color: var(--text-primary);
+      background: var(--bg-secondary);
+      line-height: 1.5;
+      outline: none;
+    }
+    textarea:focus { border-color: rgba(0,0,0,0.35); }
+    @media (prefers-color-scheme: dark) {
+      textarea:focus { border-color: rgba(255,255,255,0.3); }
+    }
+
+    .preset-list { display: flex; flex-direction: column; gap: 5px; }
+    .preset-btn {
+      text-align: left;
+      padding: 7px 10px;
+      border-radius: var(--radius-md);
+      border: 0.5px solid var(--border-light);
+      background: var(--bg-secondary);
+      font-size: 12px;
+      color: var(--text-secondary);
+      cursor: pointer;
+      font-family: var(--font);
+      transition: all 0.12s;
+    }
+    .preset-btn:hover { border-color: var(--border-mid); color: var(--text-primary); }
+
+    .run-btn {
+      width: 100%;
+      padding: 10px;
+      border-radius: var(--radius-md);
+      border: 0.5px solid var(--border-mid);
+      background: var(--bg-primary);
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-primary);
+      cursor: pointer;
+      font-family: var(--font);
+      margin-top: auto;
+      transition: all 0.12s;
+    }
+    .run-btn:hover { background: var(--bg-secondary); }
+    .run-btn:active { transform: scale(0.99); }
+    .run-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .metric-card {
+      background: var(--bg-primary);
+      border-radius: var(--radius-md);
+      padding: 14px;
+      border: 0.5px solid var(--border-light);
+    }
+    .metric-label { font-size: 11px; color: var(--text-secondary); margin-bottom: 5px; }
+    .metric-value { font-size: 21px; font-weight: 500; }
+    .metric-delta { font-size: 11px; margin-top: 4px; }
+    .up { color: #3b6d11; }
+    .dn { color: #a32d2d; }
+
+    .charts-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+      margin-bottom: 16px;
+    }
+
+    .chart-card {
+      background: var(--bg-primary);
+      border: 0.5px solid var(--border-light);
+      border-radius: var(--radius-lg);
+      padding: 16px;
+    }
+
+    .chart-title { font-size: 13px; font-weight: 500; margin-bottom: 10px; }
+
+    .chart-wrap { position: relative; width: 100%; height: 175px; }
+
+    .legend-row { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 8px; }
+    .legend-item { display: flex; align-items: center; gap: 4px; font-size: 11px; color: var(--text-secondary); }
+    .legend-swatch { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
+
+    .insight-card {
+      background: var(--bg-primary);
+      border: 0.5px solid var(--border-light);
+      border-radius: var(--radius-lg);
+      padding: 16px;
+    }
+    .insight-title { font-size: 13px; font-weight: 500; margin-bottom: 10px; }
+    .insight-body { font-size: 13px; color: var(--text-secondary); line-height: 1.75; }
+
+    .empty-state {
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      height: 420px; gap: 8px; text-align: center;
+    }
+    .empty-label { font-size: 14px; color: var(--text-secondary); font-weight: 500; }
+    .empty-sub { font-size: 12px; color: var(--text-tertiary); max-width: 260px; line-height: 1.6; }
+
+    .loading-wrap {
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      height: 420px; gap: 14px;
+    }
+    .spinner {
+      width: 24px; height: 24px;
+      border: 2px solid var(--border-light);
+      border-top-color: var(--text-secondary);
+      border-radius: 50%;
+      animation: spin 0.75s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-text { font-size: 13px; color: var(--text-secondary); }
+
+    .err-box {
+      background: var(--bg-danger);
+      border-radius: var(--radius-md);
+      padding: 12px 14px;
+      font-size: 13px;
+      color: var(--text-danger);
+      line-height: 1.55;
+      margin-bottom: 16px;
+    }
+
+    @media (max-width: 720px) {
+      .layout { grid-template-columns: 1fr; }
+      .sidebar { min-height: unset; border-right: none; border-bottom: 0.5px solid var(--border-light); }
+      .charts-grid { grid-template-columns: 1fr; }
+      .metrics-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="logo">Nova R. &nbsp;<span>AI-Augmented Full-Stack Developer</span></div>
+    <div class="badge">Portfolio demo</div>
+  </header>
+
+  <div class="layout">
+    <aside class="sidebar">
+
+      <div>
+        <div class="sec-label">Anthropic API key</div>
+        <div class="key-wrap">
+          <input type="password" id="apiKey" placeholder="sk-ant-..." oninput="onKeyInput()" />
+          <button class="eye-btn" id="eyeBtn" onclick="toggleKey()">show</button>
+        </div>
+        <div class="key-hint">
+          Stays in your browser only — sent exclusively to Anthropic.<br>
+          <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">Get a free key →</a>
+        </div>
+      </div>
+
+      <hr class="divider" />
+
+      <div>
+        <div class="sec-label">Your data</div>
+        <textarea id="dataInput" placeholder="Paste any business data — sales figures, monthly metrics, KPIs, revenue tables..."></textarea>
+      </div>
+
+      <div>
+        <div class="sec-label">Quick examples</div>
+        <div class="preset-list">
+          <button class="preset-btn" onclick="loadPreset('saas')">SaaS metrics (MRR, churn, users)</button>
+          <button class="preset-btn" onclick="loadPreset('ecomm')">E-commerce (sales, orders, AOV)</button>
+          <button class="preset-btn" onclick="loadPreset('marketing')">Marketing funnel data</button>
+        </div>
+      </div>
+
+      <button class="run-btn" id="runBtn" onclick="runAnalysis()">Analyze with AI ↗</button>
+
+    </aside>
+
+    <div class="main">
+      <div class="topbar">
+        <span class="topbar-title">Business Intelligence Dashboard</span>
+        <span class="topbar-status">
+          <span class="dot" id="keyDot"></span>
+          <span id="keyStatusText">No API key</span>
+        </span>
+      </div>
+      <div class="content" id="mainContent">
+        <div class="empty-state">
+          <div class="empty-label">Ready to analyze</div>
+          <div class="empty-sub">Add your Anthropic API key, paste data or pick an example, then hit Analyze.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const PRESETS = {
+      saas: `Month, MRR ($), Active Users, Churn Rate, New Signups
+Jan, 18400, 820, 3.2%, 95
+Feb, 21200, 940, 2.8%, 142
+Mar, 19800, 910, 3.5%, 88
+Apr, 24500, 1080, 2.1%, 190
+May, 27300, 1210, 1.9%, 175
+Jun, 31100, 1390, 1.7%, 220`,
+      ecomm: `Month, Revenue ($), Orders, Avg Order Value, Returns
+Jan, 42300, 310, 136, 18
+Feb, 38100, 275, 139, 22
+Mar, 51600, 380, 136, 15
+Apr, 47200, 345, 137, 19
+May, 63400, 460, 138, 14
+Jun, 71800, 520, 138, 11`,
+      marketing: `Channel, Impressions, Clicks, Conversions, Cost ($)
+Google Ads, 142000, 4200, 310, 8400
+Facebook, 98000, 2100, 145, 5200
+Email, 34000, 6800, 520, 800
+SEO Organic, 87000, 5400, 390, 0
+LinkedIn, 22000, 680, 48, 3100`
+    };
+
+    const COLORS = ['#378ADD','#1D9E75','#D85A30','#D4537E','#7F77DD','#639922','#BA7517'];
+    let charts = [];
+    let keyShown = false;
+
+    function toggleKey() {
+      keyShown = !keyShown;
+      document.getElementById('apiKey').type = keyShown ? 'text' : 'password';
+      document.getElementById('eyeBtn').textContent = keyShown ? 'hide' : 'show';
+    }
+
+    function onKeyInput() {
+      const val = document.getElementById('apiKey').value.trim();
+      const ok = val.startsWith('sk-ant-') && val.length > 20;
+      document.getElementById('keyDot').className = 'dot' + (ok ? ' ok' : '');
+      document.getElementById('keyStatusText').textContent = ok ? 'API key set' : 'No API key';
+    }
+
+    function loadPreset(k) {
+      document.getElementById('dataInput').value = PRESETS[k];
+    }
+
+    function killCharts() {
+      charts.forEach(c => c.destroy());
+      charts = [];
+    }
+
+    async function runAnalysis() {
+      const key = document.getElementById('apiKey').value.trim();
+      const data = document.getElementById('dataInput').value.trim();
+
+      if (!key || !key.startsWith('sk-ant-')) {
+        setContent(`<div class="err-box">Please enter a valid Anthropic API key (starts with <code>sk-ant-</code>).</div>`);
+        return;
+      }
+      if (!data) {
+        setContent(`<div class="err-box">Please paste some data or select a preset first.</div>`);
+        return;
+      }
+
+      const btn = document.getElementById('runBtn');
+      btn.disabled = true;
+      btn.textContent = 'Analyzing...';
+      setStatus(false, 'Analyzing...');
+      killCharts();
+
+      setContent(`<div class="loading-wrap"><div class="spinner"></div><div class="loading-text">Claude is reading your data...</div></div>`);
+
+      try {
+        const res = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': key,
+            'anthropic-version': '2023-06-01',
+            'anthropic-dangerous-direct-browser-access': 'true'
+          },
+          body: JSON.stringify({
+            model: 'claude-sonnet-4-20250514',
+            max_tokens: 1000,
+            messages: [{
+              role: 'user',
+              content: `You are a business analyst. Analyze this data and respond ONLY with a valid JSON object. No markdown, no backticks, no explanation.
+
+Data:
+${data}
+
+Return exactly:
+{
+  "metrics": [
+    { "label": "string ≤20 chars", "value": "formatted string", "delta": "like +12% or -3%", "up": true }
+  ],
+  "charts": [
+    {
+      "title": "string ≤30 chars",
+      "type": "bar|line|doughnut",
+      "labels": ["a","b"],
+      "datasets": [{ "label": "string", "data": [1,2], "color": "#378ADD" }]
+    }
+  ],
+  "summary": "3–4 sentence executive summary. Key trends, biggest win, one recommendation. Plain text only."
+}
+
+Rules: exactly 3 metrics, exactly 2 charts, all numbers from actual data.`
+            }]
+          })
+        });
+
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err?.error?.message || `API error ${res.status}`);
+        }
+
+        const json = await res.json();
+        const raw = json.content.map(b => b.text || '').join('');
+        const result = JSON.parse(raw.replace(/```json|```/g, '').trim());
+        renderDashboard(result);
+        setStatus(true, 'Analysis complete');
+      } catch (e) {
+        setContent(`<div class="err-box">${e.message}</div>`);
+        setStatus(false, 'Error');
+      }
+
+      btn.disabled = false;
+      btn.textContent = 'Analyze with AI ↗';
+    }
+
+    function setContent(html) {
+      killCharts();
+      document.getElementById('mainContent').innerHTML = html;
+    }
+
+    function setStatus(ok, text) {
+      document.getElementById('keyDot').className = 'dot' + (ok ? ' ok' : '');
+      document.getElementById('keyStatusText').textContent = text;
+    }
+
+    function renderDashboard(result) {
+      let html = '<div class="metrics-grid">';
+      (result.metrics || []).forEach(m => {
+        html += `<div class="metric-card">
+          <div class="metric-label">${m.label}</div>
+          <div class="metric-value">${m.value}</div>
+          <div class="metric-delta ${m.up ? 'up' : 'dn'}">${m.up ? '↑' : '↓'} ${m.delta}</div>
+        </div>`;
+      });
+      html += '</div><div class="charts-grid">';
+
+      (result.charts || []).forEach((ch, i) => {
+        const cid = 'c' + i;
+        let legend = '<div class="legend-row">';
+        ch.datasets.forEach((ds, di) => {
+          const col = ds.color || COLORS[di % COLORS.length];
+          legend += `<span class="legend-item"><span class="legend-swatch" style="background:${col}"></span>${ds.label}</span>`;
+        });
+        legend += '</div>';
+        html += `<div class="chart-card">
+          <div class="chart-title">${ch.title}</div>
+          ${legend}
+          <div class="chart-wrap"><canvas id="${cid}"></canvas></div>
+        </div>`;
+      });
+
+      html += `</div><div class="insight-card">
+        <div class="insight-title">Executive summary</div>
+        <div class="insight-body">${result.summary || ''}</div>
+      </div>`;
+
+      document.getElementById('mainContent').innerHTML = html;
+
+      (result.charts || []).forEach((ch, i) => {
+        const canvas = document.getElementById('c' + i);
+        if (!canvas) return;
+        const datasets = ch.datasets.map((ds, di) => {
+          const col = ds.color || COLORS[di % COLORS.length];
+          return {
+            label: ds.label,
+            data: ds.data,
+            backgroundColor: ch.type === 'doughnut'
+              ? COLORS.slice(0, ds.data.length)
+              : ch.type === 'line' ? col + '22' : col,
+            borderColor: col,
+            borderWidth: ch.type === 'line' ? 2 : 1,
+            tension: 0.35,
+            fill: ch.type === 'line',
+            pointRadius: 3
+          };
+        });
+        const inst = new Chart(canvas, {
+          type: ch.type,
+          data: { labels: ch.labels, datasets },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false }, tooltip: { mode: 'index', intersect: false } },
+            scales: ch.type === 'doughnut' ? {} : {
+              x: { grid: { color: 'rgba(128,128,128,0.07)' }, ticks: { font: { size: 11 }, color: '#888', autoSkip: false, maxRotation: 35 } },
+              y: { grid: { color: 'rgba(128,128,128,0.07)' }, ticks: { font: { size: 11 }, color: '#888' } }
+            }
+          }
+        });
+        charts.push(inst);
+      });
+    }
+  </script>
+</body>
+</html>
